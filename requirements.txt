@@ -10,6 +10,8 @@ sqlalchemy>=2.0.0
 pyjwt>=2.8.0
 python-dotenv>=1.0.1
 bcrypt>=4.0.0  # Criptografia nativa direta (substitui passlib/compatibilidade)
+pypdf>=3.17.0  # Leitor e extrator de arquivos PDF
+python-docx>=1.1.0  # Leitor e extrator de arquivos Word (.docx)
 
 # --- CAMADA FRONTEND: PORTAL WEB (Django BFF) ---
 django>=5.0.0

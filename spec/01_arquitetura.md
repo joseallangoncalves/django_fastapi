@@ -71,15 +71,15 @@ django_fastapi/                         # Workspace Root
 │   │   ├── math.py                     # Schemas de números e resultados matemáticos
 │   │   └── agent.py                    # Schemas das Agent Skills (Histórias, Aulas)
 │   │
-│   ├── agent_skills/                   # Lógica de Negócio & Habilidades de IA (Agent Skills)
-│   │   ├── base.py                     # Instanciação centralizada do cliente Groq
-│   │   ├── storyteller.py              # Skill: Geração de Histórias com Llama 3
-│   │   └── lecture_extractor.py        # Skill: Processador Técnico de Aulas (Padrão T-E-C)
-│   │
 │   └── routers/                        # Endpoints da API RESTful (Controllers)
 │       ├── auth.py                     # Rotas de Login e Autenticação
 │       ├── math.py                     # Rotas de operações matemáticas herdadas
 │       └── skills.py                   # Rotas de acionamento das Agent Skills
+│
+├── agent_skills/                       # Habilidades de IA & Prompts do Sistema (Agentes Autônomos)
+│   ├── base.py                         # Instanciação centralizada do cliente Groq
+│   ├── storyteller.py                  # Geração de Histórias com Llama 3
+│   └── lecture_extractor.py            # Processador Técnico de Aulas (Padrão T-E-C)
 │
 ├── frontend/                           # CAMADA 1: PORTAL WEB FRONT-END (Django)
 │   ├── manage.py                       # Utilitário de execução do Django

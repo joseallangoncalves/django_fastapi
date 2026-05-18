@@ -98,3 +98,74 @@ def obter_historico(token: str) -> dict:
                 return {"success": False, "error": "Erro ao carregar histórico"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+# --- DEPARTAMENTO DE CONTRATOS INTELIGENTES (CRUD & EXTRAÇÃO) ---
+
+def upload_contrato(file_name: str, file_bytes: bytes, token: str) -> dict:
+    url = f"{FASTAPI_BASE_URL}/contracts/upload"
+    headers = {
+        "X-API-Token": API_TOKEN,
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        
+    files = {"file": (file_name, file_bytes)}
+    try:
+        with httpx.Client() as client:
+            response = client.post(url, files=files, headers=headers, timeout=60.0)
+            if response.status_code == 201:
+                return {"success": True, "data": response.json()}
+            else:
+                detail = response.json().get("detail", "Erro ao extrair dados do contrato")
+                return {"success": False, "error": detail}
+    except Exception as e:
+        return {"success": False, "error": f"Erro de conexão: {str(e)}"}
+
+def obter_contratos(token: str) -> dict:
+    url = f"{FASTAPI_BASE_URL}/contracts/"
+    try:
+        with httpx.Client() as client:
+            response = client.get(url, headers=_get_headers(token), timeout=10.0)
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            else:
+                return {"success": False, "error": "Erro ao listar contratos"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def obter_contrato_por_id(contract_id: int, token: str) -> dict:
+    url = f"{FASTAPI_BASE_URL}/contracts/{contract_id}"
+    try:
+        with httpx.Client() as client:
+            response = client.get(url, headers=_get_headers(token), timeout=10.0)
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            else:
+                return {"success": False, "error": "Contrato não encontrado"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def atualizar_contrato(contract_id: int, payload: dict, token: str) -> dict:
+    url = f"{FASTAPI_BASE_URL}/contracts/{contract_id}"
+    try:
+        with httpx.Client() as client:
+            response = client.put(url, json=payload, headers=_get_headers(token), timeout=10.0)
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            else:
+                detail = response.json().get("detail", "Erro ao salvar alterações no contrato")
+                return {"success": False, "error": detail}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def excluir_contrato(contract_id: int, token: str) -> dict:
+    url = f"{FASTAPI_BASE_URL}/contracts/{contract_id}"
+    try:
+        with httpx.Client() as client:
+            response = client.delete(url, headers=_get_headers(token), timeout=10.0)
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            else:
+                return {"success": False, "error": "Erro ao excluir o contrato"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

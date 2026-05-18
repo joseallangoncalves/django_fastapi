@@ -17,3 +17,4 @@ class Usuario(Base):
     # Relationships
     tokens: Mapped[list["TokenAcesso"]] = relationship("TokenAcesso", back_populates="usuario", cascade="all, delete-orphan")
     historico: Mapped[list["HistoricoAgente"]] = relationship("HistoricoAgente", back_populates="usuario")
+    contratos: Mapped[list["Contrato"]] = relationship("Contrato", back_populates="usuario", cascade="all, delete-orphan")

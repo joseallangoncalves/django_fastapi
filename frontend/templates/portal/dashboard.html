@@ -73,6 +73,16 @@
                 <i class="fa-solid fa-graduation-cap"></i> Acessar Playground
             </a>
         </div>
+
+        <!-- Skill 3: Smart Contract Extractor -->
+        <div class="glass-card skill-card pink">
+            <span class="skill-badge">Análise Contratual</span>
+            <h3 class="skill-title">Contratos Inteligentes</h3>
+            <p class="skill-description">Realize uploads de contratos em PDF, Word, TXT ou MD e extraia metadados e resumos executivos detalhados de forma 100% autônoma via IA.</p>
+            <a href="{% url 'contracts_list' %}" class="btn btn-secondary" style="width: 100%; background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary))); border: none; color: #fff;">
+                <i class="fa-solid fa-file-signature"></i> Acessar Contratos
+            </a>
+        </div>
     </div>
 </div>
 
@@ -102,6 +112,8 @@
                     <td>
                         {% if log.habilidade == 'storyteller' %}
                             <span class="badge badge-storyteller">Storyteller</span>
+                        {% elif log.habilidade == 'contract_extractor' %}
+                            <span class="badge badge-storyteller" style="background: hsla(var(--primary), 0.15); color: hsl(var(--primary)); border: 1px solid hsla(var(--primary), 0.3);">Extração Contrato</span>
                         {% else %}
                             <span class="badge badge-tec_lecture">Extrator T-E-C</span>
                         {% endif %}

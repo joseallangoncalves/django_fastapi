@@ -56,6 +56,11 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{% url 'contracts_list' %}" class="nav-link {% if 'contracts' in request.path %}active{% endif %}">
+                        <i class="fa-solid fa-file-contract"></i> Contratos
+                    </a>
+                </li>
+                <li>
                     <div class="user-badge">
                         <i class="fa-solid fa-user-astronaut"></i>
                         <span>{{ request.session.user_name }}</span>

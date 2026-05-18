@@ -40,8 +40,23 @@ erDiagram
         datetime executado_em
     }
 
+    contratos {
+        int id PK
+        int usuario_id FK "usuarios.id (Nullable)"
+        string numero_contrato UK "Index"
+        string contratante
+        string contratado
+        datetime data_inicio
+        datetime data_fim
+        float valor_total
+        string moeda
+        string resumo
+        datetime criado_em
+    }
+
     usuarios ||--o{ tokens_acesso : "possui (1:N)"
     usuarios ||--o{ historico_agentes : "executa (1:N)"
+    usuarios ||--o{ contratos : "possui (1:N)"
 ```
 
 ---
@@ -94,6 +109,26 @@ erDiagram
 
 ---
 
+### D. Tabela: `contratos`
+* **Nome Físico no Banco:** `contratos`
+* **Objetivo:** Armazena os metadados dos contratos extraídos de forma inteligente pela Inteligência Artificial ou inseridos/atualizados manualmente pelo usuário.
+
+| Campo Físico | Tipo de Dados SQL | Restrições | Padrão (Default) | Descrição |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTOINCREMENT | *Nenhum* | Identificador sequencial único do registro do contrato. |
+| `usuario_id` | `INTEGER` | FOREIGN KEY, NULLABLE | *Nenhum* | ID do usuário proprietário deste contrato (referencia `usuarios.id`). |
+| `numero_contrato` | `VARCHAR(50)`| NOT NULL, UNIQUE, INDEX | *Nenhum* | Identificador único / número de identificação do contrato. |
+| `contratante` | `VARCHAR(100)`| NOT NULL | *Nenhum* | Nome completo ou razão social da empresa/entidade contratante. |
+| `contratado` | `VARCHAR(100)`| NOT NULL | *Nenhum* | Nome completo ou razão social da empresa/entidade contratada. |
+| `data_inicio` | `DATETIME` | NOT NULL | *Nenhum* | Data de início de vigência do contrato. |
+| `data_fim` | `DATETIME` | NOT NULL | *Nenhum* | Data de término da vigência do contrato. |
+| `valor_total` | `FLOAT` | NOT NULL | *Nenhum* | Valor financeiro total estipulado no contrato. |
+| `moeda` | `VARCHAR(10)` | NOT NULL | `'BRL'` | Moeda monetária utilizada no contrato (BRL, USD, EUR, etc.). |
+| `resumo` | `TEXT` | NULLABLE | *Nenhum* | Resumo conceitual/executivo gerado automaticamente pela IA do Groq. |
+| `criado_em` | `DATETIME` | NOT NULL | `CURRENT_TIMESTAMP` | Data e hora em que a extração foi persistida no banco de dados. |
+
+---
+
 ## 3. Integridade Referencial e Regras de Negócio
 
 Para evitar inconsistências ou dados órfãos no banco de dados, estabelecemos as seguintes políticas físicas:
@@ -103,3 +138,7 @@ Para evitar inconsistências ou dados órfãos no banco de dados, estabelecemos 
    
 2. **Histórico de Logs (`usuarios` 1:N `historico_agentes`):**
    * **Políticas de Exclusão:** Se um usuário for excluído, seu histórico de IA na tabela `historico_agentes` deve ser preservado para fins de faturamento e logs de auditoria. Para isso, o campo `usuario_id` na tabela de histórico aceita valores nulos, sendo configurado como `NULL` em caso de exclusão (`ON DELETE SET NULL`).
+
+3. **Gerenciamento de Contratos (`usuarios` 1:N `contratos`):**
+   * **Políticas de Exclusão:** Se um usuário for excluído, todos os seus contratos extraídos e cadastrados na tabela `contratos` serão **excluídos automaticamente** (`ON DELETE CASCADE`) para garantir a privacidade dos dados comerciais sensíveis do usuário.
+

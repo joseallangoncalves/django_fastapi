@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload de Contrato - Portal de IA{% endblock %}
+
+{% block content %}
+<!-- Back to List -->
+<div style="margin-bottom: 20px; animation: fadeInUp 0.4s var(--ease-out-expo);">
+    <a href="{% url 'contracts_list' %}" style="color: hsl(var(--text-secondary)); font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-arrow-left"></i> Voltar para Lista de Contratos
+    </a>
+</div>
+
+<!-- Page Header -->
+<div style="margin-bottom: 40px; animation: fadeInUp 0.4s var(--ease-out-expo);">
+    <h1 style="font-size: 2.2rem; font-weight: 800; font-family: 'Outfit', sans-serif; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-cloud-arrow-up" style="color: hsl(var(--primary)); text-shadow: var(--shadow-glow);"></i>
+        Upload de Contrato Inteligente
+    </h1>
+    <p style="color: hsl(var(--text-secondary)); font-size: 1.05rem;">Arraste ou selecione o arquivo do contrato para extrairmos número, vigência, valores e um resumo executivo completo via IA.</p>
+</div>
+
+<!-- Main Area -->
+<div style="max-width: 700px; margin: 0 auto; animation: fadeInUp 0.5s var(--ease-out-expo);">
+    <div class="glass-card" style="padding: 40px;">
+        <form method="post" action="{% url 'contract_upload' %}" enctype="multipart/form-data" onsubmit="showLoader('Extraindo dados estruturados do contrato e gerando resumo executivo jurídico via IA Groq... Por favor, aguarde.')">
+            {% csrf_token %}
+            
+            <!-- Drag and Drop Area -->
+            <div id="drop-zone" style="border: 2px dashed hsla(var(--primary), 0.3); border-radius: 12px; padding: 40px 20px; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer; transition: background 0.3s ease, border-color 0.3s ease; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <i class="fa-regular fa-file-pdf" id="file-icon" style="font-size: 3.5rem; color: hsl(var(--primary)); text-shadow: 0 0 15px hsla(var(--primary), 0.2); transition: transform 0.3s ease;"></i>
+                
+                <div>
+                    <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; margin-bottom: 5px; color: #fff;" id="upload-status-title">Arraste seu arquivo aqui</h3>
+                    <p style="color: hsl(var(--text-secondary)); font-size: 0.9rem;" id="upload-status-desc">Suporta formatos PDF, Word (DOCX), TXT e Markdown (MD)</p>
+                </div>
+                
+                <button type="button" class="btn btn-secondary" style="font-size: 0.9rem; padding: 8px 16px;" onclick="document.getElementById('file-input').click()">
+                    <i class="fa-solid fa-folder-open"></i> Procurar Arquivo
+                </button>
+                
+                <input type="file" name="file" id="file-input" style="display: none;" accept=".pdf,.docx,.txt,.md" required>
+            </div>
+            
+            <!-- Selected File Display Card -->
+            <div id="selected-file-card" style="display: none; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 8px; align-items: center; gap: 15px; margin-bottom: 30px;">
+                <i class="fa-regular fa-file" style="font-size: 2rem; color: hsl(var(--success));"></i>
+                <div style="flex-grow: 1; text-align: left;">
+                    <div id="selected-file-name" style="font-weight: 600; color: #fff; font-size: 0.95rem;">contrato.pdf</div>
+                    <div id="selected-file-size" style="font-size: 0.8rem; color: hsl(var(--text-secondary));">1.2 MB</div>
+                </div>
+                <button type="button" style="background: none; border: none; color: hsl(var(--text-secondary)); cursor: pointer;" onclick="clearFileSelection()">
+                    <i class="fa-solid fa-xmark" style="font-size: 1.2rem;"></i>
+                </button>
+            </div>
+            
+            <button type="submit" id="submit-btn" class="btn btn-primary btn-full" style="background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary))); border: none; font-weight: 700; box-shadow: 0 4px 15px hsla(var(--primary), 0.2);" disabled>
+                <i class="fa-solid fa-robot"></i> Iniciar Processamento Inteligente
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileIcon = document.getElementById('file-icon');
+    const statusTitle = document.getElementById('upload-status-title');
+    const statusDesc = document.getElementById('upload-status-desc');
+    const selectedFileCard = document.getElementById('selected-file-card');
+    const selectedFileName = document.getElementById('selected-file-name');
+    const selectedFileSize = document.getElementById('selected-file-size');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Drag events
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = 'rgba(255,255,255,0.06)';
+            dropZone.style.borderColor = 'hsl(var(--primary))';
+            fileIcon.style.transform = 'scale(1.1)';
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = '';
+            dropZone.style.borderColor = '';
+            fileIcon.style.transform = '';
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelection(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (fileInput.files.length > 0) {
+            handleFileSelection(fileInput.files[0]);
+        }
+    });
+
+    function handleFileSelection(file) {
+        // Change icon based on extension
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'pdf') {
+            fileIcon.className = 'fa-regular fa-file-pdf';
+            fileIcon.style.color = 'hsl(var(--destructive))';
+        } else if (ext === 'docx') {
+            fileIcon.className = 'fa-regular fa-file-word';
+            fileIcon.style.color = 'hsl(var(--info))';
+        } else if (ext === 'txt') {
+            fileIcon.className = 'fa-regular fa-file-lines';
+            fileIcon.style.color = 'hsl(var(--text-secondary))';
+        } else if (ext === 'md') {
+            fileIcon.className = 'fa-brands fa-markdown';
+            fileIcon.style.color = 'hsl(var(--secondary))';
+        } else {
+            fileIcon.className = 'fa-regular fa-file';
+            fileIcon.style.color = 'hsl(var(--primary))';
+        }
+
+        // Show card details
+        selectedFileName.textContent = file.name;
+        selectedFileSize.textContent = formatBytes(file.size);
+        
+        dropZone.style.display = 'none';
+        selectedFileCard.style.display = 'flex';
+        submitBtn.removeAttribute('disabled');
+    }
+
+    function clearFileSelection() {
+        fileInput.value = '';
+        dropZone.style.display = 'flex';
+        selectedFileCard.style.display = 'none';
+        submitBtn.setAttribute('disabled', 'true');
+        
+        fileIcon.className = 'fa-regular fa-file-pdf';
+        fileIcon.style.color = '';
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+</script>
+{% endblock %}

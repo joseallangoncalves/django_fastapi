@@ -1,3 +1,8 @@
+import os
+import sys
+# Adiciona a pasta raiz (django_fastapi) ao sys.path para importar o agent_skills
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI, Depends, Header
 from sqlalchemy.orm import Session
 from db.connection import engine
@@ -80,3 +85,5 @@ app.include_router(routers.auth)
 app.include_router(routers.usuario)
 app.include_router(routers.skills)
 app.include_router(routers.math)
+app.include_router(routers.contracts)
+# Triggering reload after installing dependencies globally and updating model to llama-3.1-8b-instant.

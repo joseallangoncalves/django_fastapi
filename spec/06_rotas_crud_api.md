@@ -11,11 +11,11 @@ Para assegurar a modularidade e facilidade de manutenção, os controladores de 
 O arquivo principal `main.py` atuará como um orquestrador leve. Ele será responsável apenas por instanciar a aplicação FastAPI, rodar as tabelas de banco de dados e incluir os roteadores específicos:
 
 ```python
-# pos_fast_api/main.py (Blueprint de Roteamento)
+# backend/main.py (Blueprint de Roteamento)
 from fastapi import FastAPI
-from database import engine
+from db.connection import engine
 import models
-from routers import usuario, auth, skills, math
+from routers import usuario, auth, skills, math, contracts
 
 app = FastAPI(title="Aula - API de IA e Gestão de Usuários")
 
@@ -29,6 +29,7 @@ app.include_router(auth.router)
 app.include_router(usuario.router)
 app.include_router(skills.router)
 app.include_router(math.router)
+app.include_router(contracts.router)
 ```
 
 ---
