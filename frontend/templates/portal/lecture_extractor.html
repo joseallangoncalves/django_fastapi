@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Extrator T-E-C - Portal de IA{% endblock %}
+
+{% block content %}
+<!-- Back to Dashboard -->
+<div style="margin-bottom: 20px; animation: fadeInUp 0.4s var(--ease-out-expo);">
+    <a href="{% url 'dashboard' %}" style="color: hsl(var(--text-secondary)); font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-arrow-left"></i> Voltar ao Dashboard
+    </a>
+</div>
+
+<!-- Page Header -->
+<div style="margin-bottom: 40px; animation: fadeInUp 0.4s var(--ease-out-expo);">
+    <h1 style="font-size: 2.2rem; font-weight: 800; font-family: 'Outfit', sans-serif; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-graduation-cap" style="color: hsl(var(--secondary)); text-shadow: var(--shadow-glow);"></i>
+        Extrator Técnico de Aulas (T-E-C)
+    </h1>
+    <p style="color: hsl(var(--text-secondary)); font-size: 1.05rem;">Cole a transcrição de uma vídeo-aula técnica. Nosso Agente de Conteúdo irá processá-la estruturadamente em Teoria, Exemplo e Código de fixação.</p>
+</div>
+
+<!-- Main Grid -->
+<div style="display: grid; grid-template-columns: 1fr; gap: 30px; animation: fadeInUp 0.5s var(--ease-out-expo);">
+    <!-- Inputs Card -->
+    <div class="glass-card">
+        <form method="post" action="{% url 'lecture_extractor' %}" onsubmit="showLoader('Analisando transcrição e estruturando conteúdo em formato JSON (T-E-C)... Isso pode levar até 45 segundos.')">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label class="form-label" for="transcricao">Transcrição da Aula Técnica</label>
+                <textarea name="transcricao" id="transcricao" class="form-input form-textarea" placeholder="Cole aqui o texto da transcrição. Ex: 'Hoje vamos falar sobre decorator no Python. Decorator serve para... Por exemplo, criar um decorator que mede o tempo. O código é def meu_decorator...'" required>{{ transcricao }}</textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-secondary btn-full" style="background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--info))); color: #000; font-weight: 700; border: none; box-shadow: 0 4px 15px hsla(var(--secondary), 0.2);">
+                <i class="fa-solid fa-microchip"></i> Extrair Conteúdo Estruturado
+            </button>
+        </form>
+    </div>
+
+    <!-- Output Rendering Area -->
+    {% if aula %}
+    <div class="output-panel">
+        <div style="margin-bottom: 25px; border-bottom: 2px solid hsla(var(--secondary), 0.2); padding-bottom: 15px;">
+            <span class="badge badge-tec_lecture" style="font-size: 0.8rem; margin-bottom: 10px;">Extração Bem-Sucedida</span>
+            <h2 style="font-size: 1.8rem; font-family: 'Outfit', sans-serif; color: hsl(var(--text-primary));">
+                {{ aula.titulo }}
+            </h2>
+        </div>
+
+        <div class="tec-section">
+            {% for secao in aula.secoes %}
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 1.25rem; font-family: 'Outfit', sans-serif; margin-bottom: 15px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span style="background-color: hsla(var(--primary), 0.2); color: hsl(var(--primary)); border: 1px solid hsla(var(--primary), 0.3); width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700;">{{ forloop.counter }}</span>
+                    Tópico Principal da Aula
+                </h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Theory Block -->
+                    <div class="tec-card theory">
+                        <div class="tec-badge">
+                            <i class="fa-solid fa-brain"></i>
+                            <span>Teoria Didática</span>
+                        </div>
+                        <div class="tec-content">
+                            <p style="color: hsl(var(--text-secondary)); font-size: 0.95rem; line-height: 1.7;">
+                                {{ secao.teoria }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Example Block -->
+                    <div class="tec-card example">
+                        <div class="tec-badge">
+                            <i class="fa-solid fa-lightbulb"></i>
+                            <span>Exemplo Aplicado</span>
+                        </div>
+                        <div class="tec-content">
+                            <p style="color: hsl(var(--text-secondary)); font-size: 0.95rem; line-height: 1.7;">
+                                {{ secao.exemplo }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Code Block -->
+                    <div class="tec-card code">
+                        <div class="tec-badge" style="justify-content: space-between;">
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-code"></i>
+                                Código de Fixação
+                            </span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px;" onclick="copyCode('code-{{ forloop.counter }}', this)">
+                                <i class="fa-regular fa-copy"></i> Copiar Código
+                            </button>
+                        </div>
+                        <div class="tec-content" style="padding: 0;">
+                            <pre class="code-block" id="code-{{ forloop.counter }}">{{ secao.codigo }}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function copyCode(elementId, button) {
+        const pre = document.getElementById(elementId);
+        if (pre) {
+            navigator.clipboard.writeText(pre.textContent).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fa-solid fa-circle-check"></i> Copiado!';
+                button.style.color = 'hsl(var(--success))';
+                button.style.borderColor = 'hsla(var(--success), 0.3)';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.color = '';
+                    button.style.borderColor = '';
+                }, 2000);
+            });
+        }
+    }
+</script>
+{% endblock %}

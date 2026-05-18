@@ -1,0 +1,16 @@
+# Core Web Application Framework
+fastapi[standard]>=0.136.1
+uvicorn>=0.47.0
+
+# AI Agents & LLM Integrations
+groq>=1.2.0
+
+# Database Persistence (SQLAlchemy)
+sqlalchemy>=2.0.0
+
+# Security, Hashing & Access Tokens
+bcrypt>=4.0.0
+pyjwt>=2.8.0
+
+# Environment Configuration
+python-dotenv>=1.0.1

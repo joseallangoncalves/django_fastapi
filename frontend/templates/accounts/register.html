@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Criar Conta - Portal de IA{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="glass-card" style="max-width: 480px; width: 100%;">
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 2.3rem; color: hsl(var(--secondary)); margin-bottom: 10px;">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.7rem; margin-bottom: 5px;">Nova Conta</h2>
+            <p style="color: hsl(var(--text-secondary)); font-size: 0.9rem;">Cadastre-se para acessar os Agentes de IA</p>
+        </div>
+
+        <form method="post" action="{% url 'register' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label" for="nome">Nome Completo</label>
+                <input type="text" name="nome" id="nome" class="form-input" placeholder="Seu nome" required value="{{ request.POST.nome }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Endereço de E-mail</label>
+                <input type="email" name="email" id="email" class="form-input" placeholder="exemplo@dominio.com" required value="{{ request.POST.email }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="senha">Senha</label>
+                <input type="password" name="senha" id="senha" class="form-input" placeholder="Mínimo 6 caracteres" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label class="form-label" for="confirm_senha">Confirme a Senha</label>
+                <input type="password" name="confirm_senha" id="confirm_senha" class="form-input" placeholder="Repita sua senha" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full" style="background: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--primary))); box-shadow: 0 4px 15px hsla(var(--primary), 0.2);">
+                <i class="fa-solid fa-user-check"></i> Cadastrar e Entrar
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 25px; font-size: 0.9rem; color: hsl(var(--text-secondary));">
+            <span>Já possui conta?</span>
+            <a href="{% url 'login' %}" style="color: hsl(var(--primary)); font-weight: 600; margin-left: 5px;">Entrar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

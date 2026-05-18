@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Portal de IA{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div style="margin-bottom: 40px; animation: fadeInUp 0.4s var(--ease-out-expo);">
+    <h1 style="font-size: 2.2rem; font-weight: 800; font-family: 'Outfit', sans-serif; margin-bottom: 8px;">
+        Olá, {{ nome }}! <span style="font-weight: 400; color: hsl(var(--text-secondary));">Seu painel está pronto.</span>
+    </h1>
+    <p style="color: hsl(var(--text-secondary)); font-size: 1.05rem;">Gerencie e execute suas habilidades de inteligência artificial autônomas abaixo.</p>
+</div>
+
+<!-- Metrics Cards -->
+<div class="metrics-grid" style="animation: fadeInUp 0.5s var(--ease-out-expo);">
+    <!-- Metric 1: Execuções -->
+    <div class="glass-card metric-card">
+        <div class="metric-icon blue">
+            <i class="fa-solid fa-circle-play"></i>
+        </div>
+        <div class="metric-data">
+            <h4>Execuções de IA</h4>
+            <div class="value">{{ logs_count }}</div>
+        </div>
+    </div>
+    
+    <!-- Metric 2: Perfil Cargo -->
+    <div class="glass-card metric-card">
+        <div class="metric-icon pink">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div class="metric-data">
+            <h4>Cargo do Perfil</h4>
+            <div class="value" style="font-size: 1.5rem; text-transform: uppercase;">{{ cargo }}</div>
+        </div>
+    </div>
+    
+    <!-- Metric 3: Status Servidor -->
+    <div class="glass-card metric-card">
+        <div class="metric-icon purple">
+            <i class="fa-solid fa-signal"></i>
+        </div>
+        <div class="metric-data">
+            <h4>Motor FastAPI</h4>
+            <div class="value" style="color: hsl(var(--secondary)); font-size: 1.5rem;">ONLINE</div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Skills Selector Grid -->
+<div style="margin-bottom: 50px; animation: fadeInUp 0.6s var(--ease-out-expo);">
+    <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.6rem; margin-bottom: 25px; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-circle-nodes" style="color: hsl(var(--primary));"></i>
+        Habilidades Disponíveis
+    </h2>
+    <div class="skills-grid">
+        <!-- Skill 1: Storyteller -->
+        <div class="glass-card skill-card purple">
+            <span class="skill-badge">Escrita Criativa</span>
+            <h3 class="skill-title">Storyteller</h3>
+            <p class="skill-description">Gere contos, narrativas e histórias ricas utilizando o modelo LLM avançado Llama 3.1 com parametrizações de temperatura ajustadas.</p>
+            <a href="{% url 'storyteller' %}" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-book-open"></i> Acessar Playground
+            </a>
+        </div>
+        
+        <!-- Skill 2: Technical Lecture Extrator -->
+        <div class="glass-card skill-card cyan">
+            <span class="skill-badge">Estruturador de Aulas</span>
+            <h3 class="skill-title">Extrator Técnico (T-E-C)</h3>
+            <p class="skill-description">Transforme transcrições brutas de vídeo-aulas em guias didáticos completos estruturados estritamente em Teoria, Exemplos e Códigos de fixação.</p>
+            <a href="{% url 'lecture_extractor' %}" class="btn btn-secondary" style="width: 100%;">
+                <i class="fa-solid fa-graduation-cap"></i> Acessar Playground
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Consumption History Log Table -->
+<div style="animation: fadeInUp 0.7s var(--ease-out-expo);">
+    <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.6rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-clock-rotate-left" style="color: hsl(var(--secondary));"></i>
+        Histórico de Consumo
+    </h2>
+    
+    {% if logs %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th style="width: 160px;">Habilidade</th>
+                    <th>Entrada (Prompt)</th>
+                    <th style="width: 200px;">Executado Em</th>
+                    <th style="width: 120px; text-align: center;">Visualizar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="font-weight: 600; color: hsl(var(--text-secondary));">#{{ log.id }}</td>
+                    <td>
+                        {% if log.habilidade == 'storyteller' %}
+                            <span class="badge badge-storyteller">Storyteller</span>
+                        {% else %}
+                            <span class="badge badge-tec_lecture">Extrator T-E-C</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: hsl(var(--text-secondary)); font-family: monospace; font-size: 0.85rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {{ log.input_prompt }}
+                    </td>
+                    <td>{{ log.executado_em }}</td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="showLogDetail('{{ log.id }}', '{{ log.habilidade }}', `{{ log.input_prompt|escapejs }}`, `{{ log.output_response|escapejs }}`)">
+                            <i class="fa-solid fa-eye"></i> Ver
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="glass-card" style="text-align: center; padding: 50px 20px; color: hsl(var(--text-secondary));">
+        <i class="fa-regular fa-folder-open" style="font-size: 3rem; margin-bottom: 15px; color: hsl(var(--text-muted));"></i>
+        <h3>Nenhum log de IA encontrado</h3>
+        <p style="margin-top: 5px; font-size: 0.9rem;">Selecione uma habilidade acima para realizar sua primeira chamada de IA!</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal for detailed viewing of historical logs -->
+<div class="loading-overlay" id="detail-modal" style="display:none; padding: 20px; overflow-y: auto;">
+    <div class="glass-card" style="max-width: 800px; width: 100%; margin: 40px auto; overflow: hidden;">
+        <div class="output-header">
+            <h3 style="font-size: 1.4rem; font-family: 'Outfit', sans-serif;" id="modal-title">Detalhes do Log</h3>
+            <button class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.85rem;" onclick="closeModal()">
+                <i class="fa-solid fa-xmark"></i> Fechar
+            </button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 20px; text-align: left;">
+            <div>
+                <h4 class="form-label">Entrada (Prompt / Tema)</h4>
+                <div class="output-body" id="modal-input" style="padding: 15px; font-family: monospace; font-size: 0.9rem; background-color: rgba(0,0,0,0.2);"></div>
+            </div>
+            <div>
+                <h4 class="form-label">Saída Gerada pela IA</h4>
+                <div class="output-body" id="modal-output" style="padding: 20px; font-size: 0.95rem; max-height: 400px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showLogDetail(id, habilidade, input, output) {
+        const modal = document.getElementById('detail-modal');
+        const title = document.getElementById('modal-title');
+        const inputDiv = document.getElementById('modal-input');
+        const outputDiv = document.getElementById('modal-output');
+        
+        if (modal && title && inputDiv && outputDiv) {
+            title.textContent = `Visualizar Log #${id} - [${habilidade.toUpperCase()}]`;
+            inputDiv.textContent = input;
+            outputDiv.textContent = output;
+            modal.style.display = 'flex';
+        }
+    }
+    
+    function closeModal() {
+        const modal = document.getElementById('detail-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}
