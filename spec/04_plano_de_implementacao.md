@@ -42,7 +42,7 @@ gantt
 * **Tarefas:**
   1. Separar o arquivo `main.py` em subpastas ou arquivos modulares:
      * `schemas.py`: Para validações Pydantic.
-     * `agent_skills.py`: Para isolar as chamadas ao Groq (Storyteller, Extrator T-E-C).
+     * `agents/`: Para isolar as chamadas ao Groq (Storyteller, Extratores) e `.agents/skills/` para as especificações das 15 habilidades.
      * `routes/`: Pasta contendo rotas organizadas por domínio (auth, skills, users).
   2. Implementar fluxo de registro de usuário com senha criptografada (`bcrypt`).
   3. Adicionar middleware ou dependência de autenticação que valida tokens JWT nos cabeçalhos de requisição.

@@ -1,5 +1,5 @@
 import json
-from agent_skills.base import client
+from agents.base import client
 from fastapi import HTTPException, status
 
 def skill_extrair_contrato(texto_contrato: str) -> dict:

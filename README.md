@@ -77,5 +77,7 @@ Com os servidores rodando, você pode acessar:
 ## 📂 Estrutura de Pastas
 
 * `frontend/`: Todo o código da interface visual dinâmica, views BFF Django, formulários, templates HTML e folhas de estilos CSS.
-* `backend/`: Código de negócio síncrono da API, conexão ORM SQLAlchemy com o banco SQLite local (`pos_sistema.db`), schemas de validação Pydantic e as Habilidades de Agente de IA (`agent_skills`).
+* `backend/`: Código de negócio síncrono da API, conexão ORM SQLAlchemy com o banco SQLite local (`pos_sistema.db`), schemas de validação Pydantic.
+* `.agents/`: Especificações de comportamento declarativas dos agentes autônomos (pasta `skills/` contendo as 15 habilidades descritas em formato `SKILL.md`).
+* `agents/`: Camada de código executável que gerencia a engenharia de prompts e as chamadas para a API do Groq Cloud.
 * `spec/`: Documentos de planejamento e especificação técnica das camadas.

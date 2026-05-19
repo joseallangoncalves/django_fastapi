@@ -18,8 +18,8 @@ graph TD
     
     subgraph FastAPI Backend Layers
         FastAPI -->|Rotas Modulares| Routers[routers/ - Controllers]
-        Routers -->|Lógica & IA| Skills[agent_skills/ - Negócio]
-        Skills -->|Validação Pydantic| Schemas[schemas/ - DTOs]
+        Routers -->|Código & IA| Skills[agents/ - Código]
+        Skills -->|Modelos Pydantic| Schemas[schemas/ - DTOs]
         Skills -->|Persistência ORM| Models[models/ - Entidades]
         Models -->|Conexão DB| DB[db/ - SQLAlchemy Engine]
     end
@@ -76,9 +76,13 @@ django_fastapi/                         # Workspace Root
 │       ├── math.py                     # Rotas de operações matemáticas herdadas
 │       └── skills.py                   # Rotas de acionamento das Agent Skills
 │
-├── agent_skills/                       # Habilidades de IA & Prompts do Sistema (Agentes Autônomos)
+├── .agents/                            # Diretório Centralizado dos Agentes Autônomos (Metadata & Prompts)
+│   └── skills/                         # Pasta das 15 Habilidades (contém SKILL.md de cada agente)
+│
+├── agents/                             # Camada de Código Executável dos Agentes (LLMs & Groq Engine)
 │   ├── base.py                         # Instanciação centralizada do cliente Groq
 │   ├── storyteller.py                  # Geração de Histórias com Llama 3
+│   ├── contract_extractor.py           # Extrator Inteligente de Contratos
 │   └── lecture_extractor.py            # Processador Técnico de Aulas (Padrão T-E-C)
 │
 ├── frontend/                           # CAMADA 1: PORTAL WEB FRONT-END (Django)
@@ -110,9 +114,11 @@ django_fastapi/                         # Workspace Root
 * **Responsabilidade:** Receber requisições HTTP, mapear parâmetros (de rota, query ou corpo) e retornar respostas formatadas.
 * **Isolamento:** Não contém lógica de banco de dados direta (CRUD) nem lógica de prompts da IA. Apenas recebe os schemas Pydantic, injeta as dependências de banco de dados (`get_db`) e delega o processamento pesado para as **Agent Skills** ou serviços.
 
-### B. A Camada de Habilidades (`agent_skills/`)
-* **Responsabilidade:** Concentrar toda a inteligência do sistema. Gerencia os prompts do sistema, interage com o cliente Groq Cloud API e processa dados sem conhecimento de protocolos HTTP.
-* **Isolamento:** Completamente independente do FastAPI e das rotas. Suas funções recebem e retornam objetos Python/Pydantic puros, tornando-a ideal para testes automatizados.
+### B. A Camada de Agentes (`.agents/` & `agents/`)
+* **Responsabilidade:** Concentrar toda a inteligência do sistema. É dividida em duas subcamadas:
+  1. **`.agents/skills/` (Instruções e Metadados):** Contém a documentação e os prompts de comportamento de cada uma das 15 Habilidades de Agente (ex: `SKILL.md` de cada pasta de agente).
+  2. **`agents/` (Código Executável):** Implementa as funções Python de invocação da LLM (Groq) utilizando o modelo `llama-3.1-8b-instant` otimizado para alta velocidade.
+* **Isolamento:** Completamente independente do FastAPI e das rotas. Suas funções recebem e retornam objetos Python/Pydantic puros, tornando-as extremamente fáceis de testar e escalar.
 
 ### C. A Camada de Schemas (`schemas/`)
 * **Responsabilidade:** Validação sintática e estrita de tipos de dados. Funciona como DTO (Data Transfer Objects).
@@ -131,5 +137,5 @@ django_fastapi/                         # Workspace Root
 ## 4. Benefícios Práticos para Manutenção
 
 Ao adotar essa estrutura dividida em pastas e camadas:
-* **Fácil depuração:** Se houver um erro de prompt de IA, ele está restrito à pasta `agent_skills/`. Se houver uma falha de campo de tabela, está restrito à pasta `models/`.
-* **Crescimento Sustentável:** Se quisermos adicionar um novo agente inteligente (ex: assistente de dúvidas), basta criarmos um arquivo novo na pasta `agent_skills/` (ex: `assistant.py`) e importarmos sua chamada na rota sem alterar o código dos agentes existentes.
+* **Fácil depuração:** Se houver um ajuste de comportamento ou prompt de IA, ele é feito de forma declarativa e documentado no `SKILL.md` em `.agents/skills/` e implementado programaticamente em `agents/`. Se houver uma falha de banco de dados, está restrita a `models/`.
+* **Crescimento Sustentável:** Se quisermos adicionar um novo agente inteligente (ex: assistente de dúvidas), basta criarmos uma nova pasta em `.agents/skills/` com seu `SKILL.md` correspondente para espelhar as informações e criarmos a função executável correspondente em `agents/` sem alterar os agentes existentes.

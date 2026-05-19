@@ -80,9 +80,9 @@ A primeira Habilidade de Agente funcional está integrada diretamente no arquivo
 Como o arquivo `main.py` atual abriga toda a lógica descrita acima, a especificação técnica para as **novas Agent Skills** exige que façamos uma separação modular limpa quando iniciarmos a fase de codificação:
 
 ```mermaid
-graph TD
-    API[main.py] -->|Importa Rotas| Routes[routes/skills.py]
-    Routes -->|Chama Execução| Skills[agent_skills.py]
+    graph TD
+        API[main.py] -->|Importa Rotas| Routes[routes/skills.py]
+        Routes -->|Chama Execução| Skills[agents/ - Código Executável]
     Skills -->|Validação de Formato| Schemas[schemas.py]
     Skills -->|Acesso ao Client| GroqClient[Groq Cloud API]
 ```
@@ -95,12 +95,12 @@ Para novas habilidades técnicas planejadas (como o processamento de materiais d
 
 ---
 
-## 3. Especificação do Futuro Módulo `agent_skills.py`
+## 3. Estrutura e Especificação das Habilidades (`.agents/skills/` & `agents/`)
 
-Para manter o seu código limpo e permitir o crescimento das habilidades, isolaremos as lógicas de prompt em funções dedicadas no arquivo `pos_fast_api/agent_skills.py` utilizando o Groq:
+Para manter o seu código limpo e permitir o crescimento das habilidades, documentamos as instruções de comportamento e prompts estruturados em formato Markdown dentro de `.agents/skills/[nome-agente]/SKILL.md` e isolamos as lógicas Python de prompt em funções dedicadas no arquivo `agents/` (ex: `storyteller.py`, `lecture_extractor.py`, `contract_extractor.py`) utilizando o Groq:
 
 ```python
-# pos_fast_api/agent_skills.py
+# agents/storyteller.py
 from groq import Groq
 import os
 from pydantic import BaseModel, Field

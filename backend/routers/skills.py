@@ -5,8 +5,8 @@ from core.security import verificar_token_acesso, common_api_token
 from db.dependency import get_db
 import models
 from schemas.agent import HistoriaInput, HistoriaOutput, AulaInput, AulaOutput
-from agent_skills.storyteller import skill_gerar_historia
-from agent_skills.lecture_extractor import skill_extrair_aula
+from agents.storyteller import skill_gerar_historia
+from agents.lecture_extractor import skill_extrair_aula
 
 router = APIRouter(
     prefix="/skills", 

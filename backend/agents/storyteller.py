@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from agent_skills.base import client
+from agents.base import client
 from schemas.agent import HistoriaInput, HistoriaOutput
 
 def skill_gerar_historia(data: HistoriaInput) -> HistoriaOutput:

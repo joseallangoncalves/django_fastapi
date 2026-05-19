@@ -1,6 +1,6 @@
 import os
 import sys
-# Adiciona a pasta raiz (django_fastapi) ao sys.path para importar o agent_skills
+# Adiciona a pasta raiz (django_fastapi) ao sys.path para importar os agents
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, Depends, Header
@@ -11,7 +11,7 @@ import models
 import routers
 from core.security import common_api_token
 from schemas.agent import Historia
-from agent_skills.storyteller import skill_gerar_historia
+from agents.storyteller import skill_gerar_historia
 from schemas.agent import HistoriaInput
 
 app = FastAPI(

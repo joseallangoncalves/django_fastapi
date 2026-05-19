@@ -4,28 +4,28 @@ Este documento especifica a arquitetura, o fluxo de dados, os schemas e os endpo
 
 ---
 
-## 1. Visão Geral do Fluxo
+## 1. Visão Geral do Fluxo (Roteamento Inteligente)
 
-A funcionalidade permitirá ao usuário carregar um arquivo de contrato nos formatos **PDF, DOC/DOCX, TXT ou Markdown (`.md`)** através de uma interface amigável. O sistema extrairá e processará o texto do contrato utilizando um agente de inteligência artificial da Groq para obter os metadados essenciais e persistir estes registros estruturados no banco de dados SQLite local.
+A funcionalidade permitirá ao usuário carregar qualquer arquivo nos formatos **PDF, DOC/DOCX, TXT ou Markdown (`.md`)** através de uma interface amigável. Em vez de assumir que é um contrato, o sistema passa o documento por um **Classificador Inteligente** (Agente Classifier), que analisa as características do texto contra as 15 Habilidades disponíveis em `.agents/skills/` e executa dinamicamente a Habilidade mais recomendada, persistindo os dados e os registrando no banco de dados SQLite de forma unificada.
 
 ```text
-[Usuário] ---> (Envia arquivo de Contrato) ---> [Portal Django (Front)]
+[Usuário] ---> (Envia arquivo/documento) ---> [Portal Django (Front)]
                                                    │
                                             (Envia via multipart/form-data)
                                                    ▼
-                                             [FastAPI (Back)]
+                                              [FastAPI (Back)]
                                                    │
-                                     (Lê e extrai texto do contrato)
+                                      (Lê e extrai texto do documento)
                                                    ▼
-                                         [Agente de IA (Groq)]
+                                        [Agente Classifier (Groq)]
                                                    │
-                                     (Extrai JSON Estruturado de Dados)
+                                      (Roteia e Executa Skill Ótima)
                                                    ▼
-                                         [Banco de Dados SQLite]
+                                          [Banco de Dados SQLite]
                                                    │
-                                     (Persiste dados e histórico)
+                                      (Persiste dados e histórico)
                                                    ▼
-                                         [Dashboard atualizado]
+                                          [Dashboard atualizado]
 ```
 
 ---
@@ -129,57 +129,22 @@ class ContratoOutput(ContratoBase):
 
 ---
 
-## 5. Nova Habilidade de Agente (`agent_skills/contract_extractor.py`)
+## 5. Agente de Classificação e Roteamento Dinâmico (`backend/agents/classifier.py`)
 
-Esta habilidade fará o parsing inteligente do texto usando o Groq LLM com parâmetros JSON estruturados para garantir retorno estrito e correto de dados:
+Esta camada carrega de forma dinâmica as especificações das 15 Habilidades de Agente declaradas em `.agents/skills/[nome]/SKILL.md`, usando o LLM da Groq como um roteador de arquivos inteligente para classificar o texto carregado e aplicar a melhor habilidade disponível:
 
 ```python
-# agent_skills/contract_extractor.py
+# backend/agents/classifier.py
+import os
+import re
 import json
-from agent_skills.base import client
-from fastapi import HTTPException, status
+from agents.base import client
 
-def skill_extrair_contrato(texto_contrato: str) -> dict:
-    if not client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Serviço do Groq não configurado. Por favor, adicione GROQ_API_KEY no arquivo .env."
-        )
-
-    prompt_sistema = (
-        "Você é um especialista em análise contratual jurídica. "
-        "Seu papel é analisar o texto do contrato fornecido e extrair dados no seguinte formato JSON estrito, sem markdown extra:\n"
-        "{\n"
-        "  \"numero_contrato\": \"Código/Número do contrato\",\n"
-        "  \"contratante\": \"Nome da empresa/entidade contratante\",\n"
-        "  \"contratado\": \"Nome da empresa/entidade contratada\",\n"
-        "  \"data_inicio\": \"AAAA-MM-DD\",\n"
-        "  \"data_fim\": \"AAAA-MM-DD\",\n"
-        "  \"valor_total\": 125000.00,\n"
-        "  \"moeda\": \"BRL\",\n"
-        "  \"resumo\": \"Breve resumo do objeto do contrato\"\n"
-        "}\n"
-        "Retorne UNICAMENTE o bloco JSON válido. Se não conseguir encontrar alguma informação, forneça um valor padrão aproximado coerente."
-    )
-
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": prompt_sistema},
-                {"role": "user", "content": f"Texto do Contrato:\n\n{texto_contrato}"}
-            ],
-            temperature=0.1,
-            response_format={"type": "json_object"}
-        )
-        
-        resultado_str = completion.choices[0].message.content
-        return json.loads(resultado_str)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Falha de processamento inteligente no agente: {str(e)}"
-        )
+def classificar_e_rotear_documento(texto_documento: str) -> dict:
+    # 1. Carrega dinamicamente a definição das 15 habilidades em `.agents/skills/`
+    # 2. Constrói um prompt inteligente listando as habilidades
+    # 3. Invoca o modelo `llama-3.1-8b-instant` para classificar o documento e obter recomendação em JSON
+    # 4. Retorna a recomendação (skill recomendada, justificativa, flag e_contrato, plano de ação)
 ```
 
 ---
@@ -188,12 +153,11 @@ def skill_extrair_contrato(texto_contrato: str) -> dict:
 
 Adicionaremos um novo router `backend/routers/contracts.py` protegendo os seguintes endpoints:
 
-* **`POST /contracts/upload`**: Recebe o arquivo de contrato via `UploadFile` contendo suporte aos seguintes formatos de arquivo:
-  * **`.txt` / `.md`**: Lidos decodificando o arquivo binário em texto. Se o texto exceder 12.000 caracteres, ele é truncado mantendo o início e o fim.
-  * **`.pdf`**: Processado utilizando a biblioteca `pypdf`. Se o PDF possuir mais de 4 páginas, lê-se apenas as 3 primeiras páginas e a última página. Se o texto concatenado exceder 12.000 caracteres, ele é truncado (primeiros 9.000 e últimos 3.000 caracteres) para respeitar os limites de TPM (Tokens Per Minute) da API da Groq Cloud.
-  * **`.docx` / `.doc`**: Lidos utilizando a biblioteca `python-docx`. Se o texto exceder 12.000 caracteres, ele é truncado da mesma forma.
-  * *Após extrair e tratar/truncar de forma inteligente o texto bruto, o endpoint aciona a habilidade `skill_extrair_contrato` usando o modelo `llama-3.1-8b-instant` (otimizado para alta velocidade e suporte a JSON nativo), persiste a entidade no banco de dados SQLite associada ao usuário autenticado e registra a execução no histórico.*
-* **`GET /contracts/`**: Lista todos os contratos analisados e persistidos do usuário autenticado.
+* **`POST /contracts/upload`**: Recebe o arquivo/documento via `UploadFile` contendo suporte a múltiplos formatos de arquivo (.pdf, .docx, .doc, .txt, .md):
+  * **Tratamento de Arquivos e Limite de Tokens**: Se o texto extraído exceder 12.000 caracteres, ele é truncado mantendo o início e o fim (primeiros 9.000 e últimos 3.000 caracteres) para respeitar rigorosamente os limites de TPM da API do Groq Cloud.
+  * **Classificação e Roteamento**: O endpoint aciona o Agente Classifier (`classificar_e_rotear_documento`) para verificar a qual das 15 habilidades do `.agents/skills/` o texto pertence.
+  * **Execução Dinâmica**: Se for um contrato, executa a habilidade `skill_extrair_contrato` estruturando os metadados completos. Caso contrário, executa dinamicamente a Habilidade correspondente carregando as diretrizes de seu `SKILL.md` (como o de `resumo`, `analisador-whatsapp`, etc.), persistindo de forma adaptada no banco de dados SQLite e gravando a justificativa detalhada e o log no histórico de execução.
+* **`GET /contracts/`**: Lista todos os registros analisados e persistidos do usuário autenticado.
 * **`GET /contracts/{contract_id}`**: Visualiza em detalhe um contrato específico pelo ID, garantindo que o contrato pertença ao usuário autenticado.
 * **`PUT /contracts/{contract_id}`**: Permite a edição/atualização manual das informações do contrato (ex: ajustar um valor ou data extraída incorretamente).
 * **`DELETE /contracts/{contract_id}`**: Exclui fisicamente do banco de dados o contrato especificado, liberando espaço e atualizando as estatísticas do painel. Esta rota é ativada via front-end pelos botões "Excluir Registro" nas interfaces de detalhes e lista de contratos, efetuando a exclusão em cascata.
