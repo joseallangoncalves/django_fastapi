@@ -147,4 +147,4 @@ class AulaOutput(BaseModel):
     secoes: list[SecaoTEC]
 ```
 
-Dessa forma, o seu `main.py` ficará leve, mantendo os endpoints de operações matemáticas que você já desenvolveu e integrando a persistência no banco de dados SQLite sem misturar responsabilidades.
+Dessa forma, o seu `main.py` ficará leve, mantendo os endpoints de operações matemáticas que você já desenvolveu e integrando a persistência no banco de dados MySQL ou PostgreSQL sem misturar responsabilidades.

@@ -1,6 +1,6 @@
-# Especificação Técnica: Arquitetura do Sistema e Estrutura de Camadas (Django + FastAPI)
+# Especificação Técnica: Arquitetura do Sistema e Estrutura de Camadas (React + FastAPI)
 
-Este documento descreve a arquitetura geral do sistema híbrido, focando na **separação total em pastas e na modularização em camadas limpas** entre o Front-end (**Django**) e o Back-end (**FastAPI**). Essa estrutura garante manutenibilidade premium, alta escalabilidade e isolamento completo de responsabilidades.
+Este documento descreve a arquitetura geral do sistema híbrido, focando na **separação total em pastas e na modularização em camadas limpas** entre o Front-end (**React**) e o Back-end (**FastAPI**). Essa estrutura garante manutenibilidade premium, alta escalabilidade e isolamento completo de responsabilidades.
 
 ---
 
@@ -10,11 +10,11 @@ O sistema é estritamente separado em dois diretórios independentes sob a raiz 
 
 ```mermaid
 graph TD
-    User([Usuário no Navegador]) -->|HTML / CSS / JS| Django[Django Frontend - frontend/]
-    Django -->|Renderização Visual| UI[Templates HTML + CSS Premium]
-    Django -->|Gerenciamento de Sessão| Session[Session Cookies]
+    User([Usuário no Navegador]) -->|React SPA| React[React Frontend - frontend/]
+    React -->|Renderização de Componentes| UI[Componentes React + CSS Premium]
+    React -->|Gerenciamento de Sessão| Session[JWT - Local/Session Storage]
     
-    Django -->|Requisições Privadas BFF| FastAPI[FastAPI Backend - backend/]
+    React -->|Requisições Client API| FastAPI[FastAPI Backend - backend/]
     
     subgraph FastAPI Backend Layers
         FastAPI -->|Rotas Modulares| Routers[routers/ - Controllers]
@@ -24,14 +24,14 @@ graph TD
         Models -->|Conexão DB| DB[db/ - SQLAlchemy Engine]
     end
     
-    DB -->|Gravação física| SQLite[(pos_sistema.db)]
+    DB -->|Gravação física| DBMS[(MySQL / PostgreSQL)]
     Skills -->|Geração AI| Groq[Groq API - Llama 3]
 ```
 
 ### Regras de Isolamento:
-1. **Front-end e Back-end Independentes:** O Django e o FastAPI rodam em processos e portas separadas, comunicando-se unicamente via chamadas de rede HTTP RESTful privadas (Server-to-Server / BFF).
-2. **Sem Vazamento de Lógica de IA para o Front-end:** Toda a engenharia de prompts, as chamadas para a API do Groq e o processamento de Habilidades do Agente (Agent Skills) residem unicamente no FastAPI. O Django apenas exibe as saídas JSON formatadas de forma visualmente rica.
-3. **Sem Vazamento de Banco de Dados para a Interface:** O Django nunca acessa o banco de dados do FastAPI diretamente. Toda manipulação de dados é feita consumindo os endpoints REST do FastAPI protegidos por tokens de acesso.
+1. **Front-end e Back-end Independentes:** O React (SPA) e o FastAPI (API) rodam em processos e portas separadas, comunicando-se via chamadas de rede HTTP RESTful assíncronas com autenticação JWT. Para permitir que o React frontend (localhost:5173) envie requisições para o FastAPI backend (localhost:8000), foi adicionado suporte a CORS (`CORSMiddleware`) na API do FastAPI.
+2. **Sem Vazamento de Lógica de IA para o Front-end:** Toda a engenharia de prompts, as chamadas para a API do Groq e o processamento de Habilidades do Agente (Agent Skills) residem unicamente no FastAPI. O React apenas exibe as saídas JSON formatadas de forma visualmente rica.
+3. **Sem Vazamento de Banco de Dados para a Interface:** O React nunca acessa o banco de dados diretamente. Toda manipulação de dados é feita consumindo os endpoints REST do FastAPI protegidos por tokens de acesso JWT.
 
 ---
 
@@ -40,23 +40,22 @@ graph TD
 Para suportar o crescimento seguro do projeto de forma que a manutenção seja simples, a estrutura física do repositório está organizada exatamente como segue:
 
 ```text
-django_fastapi/                         # Workspace Root
+react_fastapi/                          # Workspace Root
 │
 ├── backend/                            # CAMADA 2: MOTOR DE APIS E IA BACK-END (FastAPI)
 │   ├── main.py                         # Ponto de entrada e inicialização do FastAPI
 │   ├── database.py                     # Camada de compatibilidade
-│   ├── pos_sistema.db                  # Banco de dados físico SQLite (gerado automaticamente)
 │   ├── requirements.txt                # Dependências do back-end
 │   ├── pyproject.toml                  # Configurações do uv
 │   ├── uv.lock                         # Lockfile do uv
-│   ├── .env.example                    # Exemplo de configuração de variáveis de ambiente
+│   ├── .env.example                    # Exemplo de configuração de variáveis de ambiente (MySQL/PostgreSQL)
 │   │
 │   ├── core/                           # Configurações Globais & Segurança
 │   │   ├── config.py                   # Leitura de variáveis de ambiente (.env)
 │   │   └── security.py                 # Funções de hashing (bcrypt) e assinatura JWT
 │   │
 │   ├── db/                             # Banco de Dados & Conexão
-│   │   ├── connection.py               # SQLAlchemy Engine e SessionLocal síncrono
+│   │   ├── connection.py               # SQLAlchemy Engine e SessionLocal (suporte MySQL e Postgres)
 │   │   └── dependency.py               # Injeção de dependência get_db()
 │   │
 │   ├── models/                         # Entidades de Banco de Dados (ORM)
@@ -85,13 +84,18 @@ django_fastapi/                         # Workspace Root
 │   ├── contract_extractor.py           # Extrator Inteligente de Contratos
 │   └── lecture_extractor.py            # Processador Técnico de Aulas (Padrão T-E-C)
 │
-├── frontend/                           # CAMADA 1: PORTAL WEB FRONT-END (Django)
-│   ├── manage.py                       # Utilitário de execução do Django
-│   ├── core/                           # Configurações globais do projeto Django
-│   ├── accounts/                       # App de Login, Registro e Autenticação
-│   ├── portal/                         # App de Dashboard e painéis das Agent Skills
-│   ├── templates/                      # Interface visual (HTML dinâmico modernizado)
-│   └── static/                         # Estilos (Vanilla CSS premium), Scripts e Imagens
+├── frontend/                           # CAMADA 1: PORTAL WEB FRONT-END (React + Vite)
+│   ├── package.json                    # Dependências e scripts do React/Vite
+│   ├── vite.config.js                  # Configurações do Vite
+│   ├── index.html                      # Ponto de entrada do HTML
+│   ├── src/                            # Código fonte do React
+│   │   ├── main.jsx                    # Inicialização do React
+│   │   ├── App.jsx                     # Componente principal e roteamento (React Router)
+│   │   ├── components/                 # Componentes reutilizáveis (cards, loaders, toasts)
+│   │   ├── pages/                      # Páginas da aplicação (Dashboard, Login, Playgrounds)
+│   │   ├── services/                   # Integração com a API do FastAPI (Axios/Fetch)
+│   │   ├── assets/                     # Imagens e mídias estáticas
+│   │   └── styles/                     # Estilos (Vanilla CSS premium com Cosmic Dark Mode)
 │
 ├── spec/                               # Documentação e Planejamento Técnico
 │   ├── 01_arquitetura.md               # [Esta Especificação]
@@ -100,7 +104,7 @@ django_fastapi/                         # Workspace Root
 │   ├── 04_plano_de_implementacao.md
 │   ├── 05_esquema_banco_dados.md
 │   ├── 06_rotas_crud_api.md
-│   └── frontend.md                     # Especificação do Portal Frontend
+│   └── frontend.md                     # Especificação do Portal Frontend (React)
 │
 ├── .venv/                              # Ambiente virtual compartilhado
 └── run_servers.ps1                     # Script de inicialização automática de ambos os servidores
@@ -125,11 +129,11 @@ django_fastapi/                         # Workspace Root
 * **Isolamento:** Contém apenas classes Pydantic, garantindo que os dados que entram ou saem da API estejam exatamente no formato especificado antes de qualquer processamento de negócio.
 
 ### D. A Camada de Modelos (`models/`)
-* **Responsabilidade:** Definir o mapeamento das tabelas relacionais do SQLAlchemy que serão traduzidas para o SQLite físico.
+* **Responsabilidade:** Definir o mapeamento das tabelas relacionais do SQLAlchemy que serão traduzidas para o banco de dados físico (MySQL ou PostgreSQL).
 * **Isolamento:** Contém unicamente as entidades do ORM SQLAlchemy. Ela não faz validação HTTP nem lógica de IA.
 
 ### E. A Camada de Banco de Dados (`db/`)
-* **Responsabilidade:** Gerenciar a conexão e o ciclo de vida das transações através da injeção de dependência síncrona `get_db()`.
+* **Responsabilidade:** Gerenciar a conexão e o ciclo de vida das transações através da injeção de dependência síncrona `get_db()`. Suporta alternância dinâmica e pool de conexões tanto para **MySQL** quanto para **PostgreSQL**.
 * **Isolamento:** Fornece a sessão ativa do banco para as rotas que necessitam gravar dados, garantindo que a sessão seja fechada de forma segura ao final de cada requisição.
 
 ---

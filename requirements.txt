@@ -7,12 +7,11 @@ fastapi[standard]>=0.136.1
 uvicorn>=0.47.0
 groq>=1.2.0
 sqlalchemy>=2.0.0
+pymysql>=1.1.0  # Driver MySQL
+psycopg2-binary>=2.9.9  # Driver PostgreSQL
 pyjwt>=2.8.0
 python-dotenv>=1.0.1
 bcrypt>=4.0.0  # Criptografia nativa direta (substitui passlib/compatibilidade)
 pypdf>=3.17.0  # Leitor e extrator de arquivos PDF
 python-docx>=1.1.0  # Leitor e extrator de arquivos Word (.docx)
 
-# --- CAMADA FRONTEND: PORTAL WEB (Django BFF) ---
-django>=5.0.0
-httpx>=0.27.0  # Cliente HTTP para comunicação Server-to-Server BFF

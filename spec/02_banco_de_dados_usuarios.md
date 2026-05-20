@@ -6,39 +6,51 @@ Este documento especifica em alto nível técnico o design do Banco de Dados, a 
 
 ## 1. Escolha do Banco de Dados e ORM (SQLAlchemy Nativo)
 
-* **Banco de Dados:** Utilização do **SQLite** como motor local para persistência rápida em arquivo único (`pos_sistema.db`).
+* **Banco de Dados:** Suporte total a **MySQL** e **PostgreSQL** como motores de persistência relacional.
+  * Driver MySQL: `pymysql` (conexão via `mysql+pymysql://`)
+  * Driver PostgreSQL: `psycopg2` ou `psycopg2-binary` (conexão via `postgresql+psycopg2://`)
 * **ORM:** **SQLAlchemy v2.0** utilizando o estilo declarativo moderno (`Mapped` e `mapped_column`) para mapeamento de tabelas.
-* **Ciclo de Conexões:** Sessões locais gerenciadas de forma síncrona/assíncrona que abrem a cada requisição HTTP e são encerradas automaticamente logo após o término da resposta (padrão *Session-per-Request*).
-* **Criação de Tabelas:** Utilização do método nativo do SQLAlchemy `Base.metadata.create_all(bind=engine)` no momento de inicialização da aplicação FastAPI para garantir a integridade estrutural sem a necessidade inicial de ferramentas externas de migração.
+* **Ciclo de Conexões:** Pool de conexões gerenciadas de forma síncrona/assíncrona que abrem a cada requisição HTTP e são encerradas automaticamente logo após o término da resposta (padrão *Session-per-Request*).
+* **Criação de Tabelas:** Utilização do método nativo do SQLAlchemy `Base.metadata.create_all(bind=engine)` no momento de inicialização da aplicação FastAPI para garantir a integridade estrutural.
 
 ---
 
-## 2. Especificação do Módulo de Conexão (`database.py`)
+## 2. Especificação do Módulo de Conexão (`backend/db/connection.py`)
 
-A comunicação entre a API e o banco de dados será definida no arquivo `pos_fast_api/database.py`. O código a ser implementado seguirá estritamente as regras de gerenciamento de dependências do FastAPI:
+A comunicação entre a API e o banco de dados será definida no arquivo `backend/db/connection.py`. O código a ser implementado detecta dinamicamente o banco configurado pela variável de ambiente `DATABASE_URL`:
 
 ```python
-# pos_fast_api/database.py
+# backend/db/connection.py
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
-# 1. Definição da URL de Conexão (SQLite local)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./pos_sistema.db"
+# 1. Definição da URL de Conexão (Lida dinamicamente do .env)
+# Exemplos:
+# MySQL: "mysql+pymysql://usuario:senha@localhost:3306/nome_banco"
+# Postgres: "postgresql+psycopg2://usuario:senha@localhost:5432/nome_banco"
+DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:root@localhost:3306/pos_sistema")
 
 # 2. Criação do Engine do Banco
-# Nota: 'connect_args={"check_same_thread": False}' é necessário apenas para o SQLite
+# Nota: 'connect_args={"check_same_thread": False}' é aplicável apenas a SQLite (caso usado para testes)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    DATABASE_URL, 
+    connect_args=connect_args,
+    pool_pre_ping=True  # Evita desconexões inesperadas do MySQL/PostgreSQL
 )
 
 # 3. Fábrica de Sessões (Sessionmaker)
-# autoflush=False e autocommit=False garantem controle total sobre as transações
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+```
 
-# 4. Classe Base Declarativa para Herança dos Modelos
-Base = declarative_base()
+E a injeção de dependência no FastAPI em `backend/db/dependency.py`:
 
-# 5. Dependência do FastAPI (get_db)
+```python
+# backend/db/dependency.py
+from db.connection import SessionLocal
+
 # Garante que cada requisição tenha sua própria sessão aberta e fechada de forma segura
 def get_db():
     db = SessionLocal()
@@ -50,16 +62,16 @@ def get_db():
 
 ---
 
-## 3. Especificação do Módulo de Modelos (`models.py`)
+## 3. Especificação do Módulo de Modelos (`backend/models/`)
 
-Todos os modelos de dados herdarão de `Base` (importada de `database.py`) e serão definidos em `pos_fast_api/models.py`. O mapeamento utilizará a sintaxe robusta do SQLAlchemy v2.0:
+Todos os modelos de dados herdarão de `Base` (definida em `backend/models/base.py`) e serão definidos no diretório `backend/models/`. O mapeamento utilizará a sintaxe robusta do SQLAlchemy v2.0:
 
 ```python
-# pos_fast_api/models.py
+# backend/models/usuario.py
 from datetime import datetime
 from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from database import Base
+from models.base import Base
 
 # --- MODELO: Usuario ---
 class Usuario(Base):
@@ -112,12 +124,11 @@ class HistoricoAgente(Base):
 
 ## 4. Integração das Tabelas no Startup da Aplicação
 
-Para garantir que o banco de dados e suas tabelas sejam criados sem scripts manuais, adicionamos a seguinte especificação ao fluxo de inicialização da aplicação. Além disso, o sistema realiza a **semeadura automática (seeding)** de um usuário administrador padrão (`admin@admin.com` / `admin`) na primeira execução:
-
 ```python
 # backend/main.py
 from fastapi import FastAPI
 from db.connection import engine
+from models.base import Base
 import models
 
 app = FastAPI(title="Aula - API de IA e Gestão de Usuários")
@@ -125,26 +136,32 @@ app = FastAPI(title="Aula - API de IA e Gestão de Usuários")
 # Comando executado na inicialização para criar todas as tabelas mapeadas e semear o administrador
 @app.on_event("startup")
 def startup_event():
-    models.Base.metadata.create_all(bind=engine)
-    print("Banco de dados SQLite inicializado e tabelas criadas com sucesso!")
+    Base.metadata.create_all(bind=engine)
+    print("Banco de dados MySQL/PostgreSQL inicializado e tabelas criadas com sucesso!")
     
     # Seeding do usuário administrador padrão se não estiver presente
     from db.connection import SessionLocal
     from core.security import obter_senha_hash
     db = SessionLocal()
     try:
-        admin_user = db.query(models.Usuario).filter(models.Usuario.email == "admin@admin.com").first()
+        admin_user = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.email == "admin@admin").first()
         if not admin_user:
-            new_admin = models.Usuario(
-                nome="Administrador",
-                email="admin@admin.com",
-                senha_hash=obter_senha_hash("admin"),
-                cargo="admin",
-                ativo=True
-            )
-            db.add(new_admin)
-            db.commit()
-            print("Usuário Administrador padrão ('admin@admin.com' / 'admin') semeado com sucesso!")
+            admin_old = db.query(models.usuario.Usuario).filter(models.usuario.Usuario.email == "admin@admin.com").first()
+            if admin_old:
+                admin_old.email = "admin@admin"
+                db.commit()
+                print("Usuário Administrador padrão atualizado de admin@admin.com para admin@admin")
+            else:
+                new_admin = models.usuario.Usuario(
+                    nome="Administrador",
+                    email="admin@admin",
+                    senha_hash=obter_senha_hash("admin"),
+                    cargo="admin",
+                    ativo=True
+                )
+                db.add(new_admin)
+                db.commit()
+                print("Usuário Administrador padrão ('admin@admin' / 'admin') semeado com sucesso!")
     except Exception as e:
         print(f"Erro no seeding: {e}")
     finally:
@@ -153,27 +170,27 @@ def startup_event():
 
 ---
 
-## 5. Fluxo de Autenticação Segura (FastAPI & Django)
+## 5. Fluxo de Autenticação Segura (FastAPI & React)
 
 ```text
-[Usuário] ---> (Tenta Login) ---> [Django Front]
-                                      │
-                                 (Faz chamada POST de validação com API_TOKEN interno)
-                                      ▼
-                                [FastAPI Back]
-                                      │
-                         (Verifica email/senha via hash)
-                                      ▼
-                        [Retorna Perfil + Token de Sessão]
-                                      │
-    [Django] <------------------------┘
+[Usuário] ---> (Tenta Login) ---> [React Frontend SPA]
+                                       │
+                                 (Chamada HTTP POST para /auth/login com credenciais)
+                                       ▼
+                                 [FastAPI Backend]
+                                       │
+                          (Verifica email/senha via hash bcrypt no DB)
+                                       ▼
+                        [Retorna Perfil + Token de Acesso JWT]
+                                       │
+    [React] <--------------------------┘
       │
-(Cria Sessão Segura baseada em Cookie no Navegador do Usuário)
+(Armazena JWT no localStorage/sessionStorage de forma segura)
       ▼
-[Dashboard Acessível]
+[Dashboard Acessível com Bearer Token nos cabeçalhos das requisições]
 ```
 
 ### Segurança e Hash de Senha
 * As senhas nunca serão salvas em texto plano no banco de dados.
-* Utilização direta da biblioteca **`bcrypt`** de forma nativa no FastAPI para geração e validação de hashes de senhas. Isso elimina os problemas de compatibilidade e obsolescência da biblioteca `passlib` em ambientes modernos do Python 3.10+.
-* Comunicação interna entre Django e FastAPI autenticada com uma chave de segurança robusta no cabeçalho das requisições (`X-API-Token`), definida por variáveis de ambiente.
+* Utilização direta da biblioteca **`bcrypt`** de forma nativa no FastAPI para geração e validação de hashes de senhas. Isso elimina os problemas de compatibilidade e obsolescência da biblioteca `passlib`.
+* Comunicação segura baseada em cabeçalhos HTTP padrão (`Authorization: Bearer <JWT>`) para todas as rotas privadas da API.

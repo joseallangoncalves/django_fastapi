@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Header, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from core.config import settings
 from core.security import verificar_senha, criar_token_acesso, common_api_token
@@ -12,7 +12,7 @@ from schemas.usuario import UsuarioResponse
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     senha: str
 
 @router.post("/login", response_model=TokenResponse)

@@ -13,16 +13,52 @@ O arquivo principal `main.py` atuará como um orquestrador leve. Ele será respo
 ```python
 # backend/main.py (Blueprint de Roteamento)
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from db.connection import engine
 import models
 from routers import usuario, auth, skills, math, contracts
 
 app = FastAPI(title="Aula - API de IA e Gestão de Usuários")
 
-# Garante criação de tabelas na inicialização
+# Habilita suporte a CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Garante criação de tabelas e semeia administrador padrão na inicialização
 @app.on_event("startup")
 def startup_event():
     models.Base.metadata.create_all(bind=engine)
+    
+    # Seeding do usuário admin padrão
+    from db.connection import SessionLocal
+    from core.security import obter_senha_hash
+    db = SessionLocal()
+    try:
+        admin_user = db.query(models.Usuario).filter(models.Usuario.email == "admin@admin").first()
+        if not admin_user:
+            admin_old = db.query(models.Usuario).filter(models.Usuario.email == "admin@admin.com").first()
+            if admin_old:
+                admin_old.email = "admin@admin"
+                db.commit()
+            else:
+                new_admin = models.Usuario(
+                    nome="Administrador",
+                    email="admin@admin",
+                    senha_hash=obter_senha_hash("admin"),
+                    cargo="admin",
+                    ativo=True
+                )
+                db.add(new_admin)
+                db.commit()
+    except Exception as e:
+        print(f"Erro no seeding: {e}")
+    finally:
+        db.close()
 
 # Inclusão dos roteadores modulares com prefixes e tags organizadas
 app.include_router(auth.router)
@@ -41,12 +77,12 @@ Para manter a separação de camadas descrita na especificação de arquitetura,
 ```python
 # pos_fast_api/schemas/usuario.py
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 # Classe base com atributos comuns
 class UsuarioBase(BaseModel):
     nome: str = Field(..., max_length=100, description="Nome completo do usuário")
-    email: EmailStr = Field(..., description="Endereço de email válido e único")
+    email: str = Field(..., description="Endereço de email válido e único")
     cargo: str = Field("user", max_length=20, description="Nível de acesso (admin, user)")
 
 # Schema enviado para criação (Adicionar)
@@ -56,7 +92,7 @@ class UsuarioCreate(UsuarioBase):
 # Schema enviado para atualização (Update)
 class UsuarioUpdate(BaseModel):
     nome: str | None = Field(None, max_length=100)
-    email: EmailStr | None = None
+    email: str | None = None
     cargo: str | None = Field(None, max_length=20)
     ativo: bool | None = None
     senha: str | None = Field(None, min_length=6, description="Nova senha se for atualizar")

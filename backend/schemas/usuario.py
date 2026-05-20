@@ -1,10 +1,10 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 # Common base class
 class UsuarioBase(BaseModel):
     nome: str = Field(..., max_length=100, description="Nome completo do usuário")
-    email: EmailStr = Field(..., description="Endereço de email válido e único")
+    email: str = Field(..., description="Endereço de email válido e único")
     cargo: str = Field("user", max_length=20, description="Nível de acesso (admin, user)")
 
 # Schema for user creation
@@ -14,7 +14,7 @@ class UsuarioCreate(UsuarioBase):
 # Schema for user update
 class UsuarioUpdate(BaseModel):
     nome: str | None = Field(None, max_length=100)
-    email: EmailStr | None = None
+    email: str | None = None
     cargo: str | None = Field(None, max_length=20)
     ativo: bool | None = None
     senha: str | None = Field(None, min_length=6, description="Nova senha se for atualizar")

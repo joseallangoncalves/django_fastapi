@@ -1,15 +1,15 @@
 # Especificação Técnica: Upload de Contrato e Extração de Dados Inteligentes (IA)
 
-Este documento especifica a arquitetura, o fluxo de dados, os schemas e os endpoints para a nova funcionalidade de **Upload e Processamento Inteligente de Contratos** integrada ao ecossistema Django/FastAPI com suporte a IA autônoma via Groq.
+Este documento especifica a arquitetura, o fluxo de dados, os schemas e os endpoints para a nova funcionalidade de **Upload e Processamento Inteligente de Contratos** integrada ao ecossistema React/FastAPI com suporte a IA autônoma via Groq.
 
 ---
 
 ## 1. Visão Geral do Fluxo (Roteamento Inteligente)
 
-A funcionalidade permitirá ao usuário carregar qualquer arquivo nos formatos **PDF, DOC/DOCX, TXT ou Markdown (`.md`)** através de uma interface amigável. Em vez de assumir que é um contrato, o sistema passa o documento por um **Classificador Inteligente** (Agente Classifier), que analisa as características do texto contra as 15 Habilidades disponíveis em `.agents/skills/` e executa dinamicamente a Habilidade mais recomendada, persistindo os dados e os registrando no banco de dados SQLite de forma unificada.
+A funcionalidade permitirá ao usuário carregar qualquer arquivo nos formatos **PDF, DOC/DOCX, TXT ou Markdown (`.md`)** através de uma interface amigável. Em vez de assumir que é um contrato, o sistema passa o documento por um **Classificador Inteligente** (Agente Classifier), que analisa as características do texto contra as 15 Habilidades disponíveis em `.agents/skills/` e executa dinamicamente a Habilidade mais recomendada, persistindo os dados e os registrando no banco de dados MySQL ou PostgreSQL de forma unificada.
 
 ```text
-[Usuário] ---> (Envia arquivo/documento) ---> [Portal Django (Front)]
+[Usuário] ---> (Envia arquivo/documento) ---> [Portal React (Front)]
                                                    │
                                             (Envia via multipart/form-data)
                                                    ▼
@@ -21,7 +21,7 @@ A funcionalidade permitirá ao usuário carregar qualquer arquivo nos formatos *
                                                    │
                                       (Roteia e Executa Skill Ótima)
                                                    ▼
-                                          [Banco de Dados SQLite]
+                                          [Banco de Dados MySQL/PostgreSQL]
                                                    │
                                       (Persiste dados e histórico)
                                                    ▼
@@ -156,7 +156,7 @@ Adicionaremos um novo router `backend/routers/contracts.py` protegendo os seguin
 * **`POST /contracts/upload`**: Recebe o arquivo/documento via `UploadFile` contendo suporte a múltiplos formatos de arquivo (.pdf, .docx, .doc, .txt, .md):
   * **Tratamento de Arquivos e Limite de Tokens**: Se o texto extraído exceder 12.000 caracteres, ele é truncado mantendo o início e o fim (primeiros 9.000 e últimos 3.000 caracteres) para respeitar rigorosamente os limites de TPM da API do Groq Cloud.
   * **Classificação e Roteamento**: O endpoint aciona o Agente Classifier (`classificar_e_rotear_documento`) para verificar a qual das 15 habilidades do `.agents/skills/` o texto pertence.
-  * **Execução Dinâmica**: Se for um contrato, executa a habilidade `skill_extrair_contrato` estruturando os metadados completos. Caso contrário, executa dinamicamente a Habilidade correspondente carregando as diretrizes de seu `SKILL.md` (como o de `resumo`, `analisador-whatsapp`, etc.), persistindo de forma adaptada no banco de dados SQLite e gravando a justificativa detalhada e o log no histórico de execução.
+  * **Execução Dinâmica**: Se for um contrato, executa a habilidade `skill_extrair_contrato` estruturando os metadados completos. Caso contrário, executa dinamicamente a Habilidade correspondente carregando as diretrizes de seu `SKILL.md` (como o de `resumo`, `analisador-whatsapp`, etc.), persistindo de forma adaptada no banco de dados MySQL/PostgreSQL e gravando a justificativa detalhada e o log no histórico de execução.
 * **`GET /contracts/`**: Lista todos os registros analisados e persistidos do usuário autenticado.
 * **`GET /contracts/{contract_id}`**: Visualiza em detalhe um contrato específico pelo ID, garantindo que o contrato pertença ao usuário autenticado.
 * **`PUT /contracts/{contract_id}`**: Permite a edição/atualização manual das informações do contrato (ex: ajustar um valor ou data extraída incorretamente).
@@ -164,11 +164,11 @@ Adicionaremos um novo router `backend/routers/contracts.py` protegendo os seguin
 
 ---
 
-## 7. Integração com Frontend (Django)
+## 7. Integração com Frontend (React)
 
-* **Interface Visual**: Criaremos uma página com formulário de upload de arquivos com área *Drag and Drop* (arrastar e soltar), aceitando explicitamente as extensões `.pdf`, `.doc`, `.docx`, `.txt` e `.md` (estilizado em CSS moderno e animado).
+* **Interface Visual**: Criaremos um componente React com formulário de upload de arquivos com área *Drag and Drop* (arrastar e soltar), aceitando explicitamente as extensões `.pdf`, `.doc`, `.docx`, `.txt` e `.md` (estilizado em CSS moderno e animado).
 * **Painel de Resultados**: Uma exibição em estilo de cartões interativos mostrando os detalhes extraídos (Número, Contratante, Contratado, Datas, Valor e o Resumo da IA).
-* **Persistência**: Uma chamada síncrona `httpx.post` multipart do Django BFF para o FastAPI transmitindo o arquivo carregado de forma transparente.
+* **Persistência**: Uma chamada assíncrona multipart (utilizando Axios ou Fetch API) do React para o FastAPI transmitindo o arquivo carregado de forma transparente.
 
 ---
 

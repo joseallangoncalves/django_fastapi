@@ -19,29 +19,45 @@ app = FastAPI(
     description="Backend FastAPI para gerenciar Habilidades de Agente e Autenticação de Usuários"
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Startup event to ensure physical SQLite database, tables are created and default admin is seeded
 @app.on_event("startup")
 def startup_event():
     models.Base.metadata.create_all(bind=engine)
-    print("Banco de dados SQLite inicializado e tabelas criadas com sucesso!")
+    print("Banco de dados MySQL/PostgreSQL inicializado e tabelas criadas com sucesso!")
     
     # Seeding default admin credentials if not present
     from db.connection import SessionLocal
     from core.security import obter_senha_hash
     db = SessionLocal()
     try:
-        admin_user = db.query(models.Usuario).filter(models.Usuario.email == "admin@admin.com").first()
+        admin_user = db.query(models.Usuario).filter(models.Usuario.email == "admin@admin").first()
         if not admin_user:
-            new_admin = models.Usuario(
-                nome="Administrador",
-                email="admin@admin.com",
-                senha_hash=obter_senha_hash("admin"),
-                cargo="admin",
-                ativo=True
-            )
-            db.add(new_admin)
-            db.commit()
-            print("Usuário Administrador padrão ('admin@admin.com' / 'admin') criado com sucesso!")
+            admin_old = db.query(models.Usuario).filter(models.Usuario.email == "admin@admin.com").first()
+            if admin_old:
+                admin_old.email = "admin@admin"
+                db.commit()
+                print("Usuário Administrador padrão atualizado de admin@admin.com para admin@admin")
+            else:
+                new_admin = models.Usuario(
+                    nome="Administrador",
+                    email="admin@admin",
+                    senha_hash=obter_senha_hash("admin"),
+                    cargo="admin",
+                    ativo=True
+                )
+                db.add(new_admin)
+                db.commit()
+                print("Usuário Administrador padrão ('admin@admin' / 'admin') criado com sucesso!")
     except Exception as e:
         print(f"Erro ao criar usuário administrador padrão: {e}")
     finally:
@@ -86,4 +102,4 @@ app.include_router(routers.usuario)
 app.include_router(routers.skills)
 app.include_router(routers.math)
 app.include_router(routers.contracts)
-# Triggering reload after installing dependencies globally and updating model to llama-3.1-8b-instant.
+# Triggering reload after updating API_TOKEN in env.
